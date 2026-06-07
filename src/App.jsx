@@ -276,10 +276,30 @@ function AuthModal({ mode, setMode, onClose, onSuccess, onLogin }) {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const selectRole = (nextRole) => {
+  const performLogin = async (email, pass) => {
+    const data = await authApi.login(email, pass);
+    saveToken(data.access_token);
+    const mappedRole = mapApiRole(data.role);
+    onLogin(mappedRole);
+    onSuccess(`${data.full_name} platformaǵa kirdi`);
+    onClose();
+  };
+
+  const selectRole = async (nextRole) => {
+    const account = accounts[nextRole];
     setRole(nextRole);
-    setLogin(accounts[nextRole].email);
-    setPassword(accounts[nextRole].password);
+    setLogin(account.email);
+    setPassword(account.password);
+    if (!isLogin) return;
+
+    setLoading(true);
+    try {
+      await performLogin(account.email, account.password);
+    } catch (error) {
+      onSuccess(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submit = async (event) => {
@@ -297,12 +317,7 @@ function AuthModal({ mode, setMode, onClose, onSuccess, onLogin }) {
         setMode("login");
         return;
       }
-      const data = await authApi.login(login, password);
-      saveToken(data.access_token);
-      const mappedRole = mapApiRole(data.role);
-      onLogin(mappedRole);
-      onSuccess(`${data.full_name} platformaǵa kirdi`);
-      onClose();
+      await performLogin(login, password);
     } catch (error) {
       onSuccess(error.message);
     } finally {
@@ -343,6 +358,7 @@ function AuthModal({ mode, setMode, onClose, onSuccess, onLogin }) {
                     <button
                       key={item}
                       type="button"
+                      disabled={loading}
                       onClick={() => selectRole(item)}
                       className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${
                         role === item ? "border-emerald-600 bg-emerald-600 text-white shadow-lg" : "border-emerald-100 bg-white text-slate-600 hover:border-emerald-300 dark:border-white/10 dark:bg-white/10 dark:text-slate-300"

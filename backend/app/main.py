@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import ai, assignments, auth, groups, questions, statistics, subjects, submissions, teacher
 from app.core.config import get_settings
 from app.core.database import Base, engine
+from app.db_seed import seed_database
 
 
 settings = get_settings()
 Base.metadata.create_all(bind=engine)
+seed_database()
 
 app = FastAPI(title="AI járdeminde tapsırma tekseriwshi platforma")
 
