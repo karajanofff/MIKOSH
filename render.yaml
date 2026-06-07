@@ -1,0 +1,56 @@
+# MIKOSH — Render Blueprint
+# Repo: https://github.com/karajanofff/MIKOSH
+
+databases:
+  - name: mikosh-db
+    plan: free
+    databaseName: mikosh
+    user: mikosh
+
+services:
+  # FastAPI backend
+  - type: web
+    name: mikosh-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mikosh-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        fromService:
+          type: web
+          name: mikosh-frontend
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # React + Vite frontend (static)
+  - type: web
+    name: mikosh-frontend
+    runtime: static
+    buildCommand: npm install && VITE_API_URL="$VITE_API_BASE/api" npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: mikosh-api
+          envVarKey: RENDER_EXTERNAL_URL
